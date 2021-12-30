@@ -17,37 +17,12 @@ class App extends Component {
     isAuth: false,
     authMode: 'login',
     error: null,
-    client: null
   };
 
   constructor() {
     super();
     this.client = new Realm.App({ id: "myshop-guauv" });
-    // this.login();
   };
-
-  login = async () => {
-    this.client = new Realm.App({ id: "myshop-guauv" });
-    // Create an anonymous credential
-    const credentials = Realm.Credentials.anonymous();
-    try {
-      // Authenticate the user
-      const user = await this.client.logIn(credentials);
-      // `App.currentUser` updates to match the logged in user
-      if (user.id === this.client.currentUser.id) {
-        const token = user
-        console.log(token);
-        // Theoretically, you would now store the token in localstorage + app state
-        // and use it for subsequent requests to protected backend resources
-        return user
-      } else {
-        console.log(user.id, '!=', this.client.currentUser.id)
-        console.error("Failed to login. Incorrect credentials provided.");
-      }
-    } catch (err) {
-      console.error("Failed to log in", err);
-    }
-  }
 
   logoutHandler = () => {
     this.setState({ isAuth: false });
@@ -58,18 +33,20 @@ class App extends Component {
     if (authData.email.trim() === '' || authData.password.trim() === '') {
       return;
     }
-    let request;
     if (this.state.authMode === 'login') {
       const credentials = Realm.Credentials.emailPassword(authData.email, authData.password);
       console.log(credentials)
       try {
-        request = await this.client.logIn(credentials)
+        // Authenticate the user
+        const user = await this.client.logIn(credentials)
+
         // `App.currentUser` updates to match the logged in user
-        if (request.id === this.client.currentUser.id) {
-          const token = request
+        if (user.id === this.client.currentUser.id) {
+          await user.callFunction('Greet', ["Kate"])
+          const token = user
           console.log(token);
           this.setState({ isAuth: true });
-          return request
+          //return user
         } else {
           console.log(request.id, '!=', this.client.currentUser.id)
           console.error("Failed to login. Incorrect credentials provided.");
@@ -82,41 +59,11 @@ class App extends Component {
       }
     } else {
       try {
-        request = await this.client.emailPasswordAuth.registerUser(authData.email, authData.password)
+        const request = await this.client.emailPasswordAuth.registerUser(authData.email, authData.password)
       } catch (err) {
         console.error("Failed to register user", err);
       }
     }
-    // request
-    //   .then(result => {
-    //     console.log(result);
-    //     if (result) {
-    //       const token = result;
-    //       console.log(token)
-    //       this.setState({ isAuth: true });
-    //     }
-    //   })
-    //   .catch(err => {
-    //     this.errorHandler('An error occurred.');
-    //     console.log(err);
-    //     this.setState({ isAuth: false });
-    //   })
-
-    // request
-    //   .then(authResponse => {
-    //     if (authResponse.status === 201 || authResponse.status === 200) {
-    //       const token = authResponse.data.token;
-    //       console.log(token);
-    //       // Theoretically, you would now store the token in localstorage + app state
-    //       // and use it for subsequent requests to protected backend resources
-    //       
-    //     }
-    //   })
-    //   .catch(err => {
-    //     this.errorHandler(err.response.data.message);
-    //     console.log(err);
-    //     this.setState({ isAuth: false });
-    //   });
   };
 
   authModeChangedHandler = () => {
