@@ -1,9 +1,11 @@
 import React, { Component } from 'react';
-import axios from 'axios';
+import * as  Realm  from 'realm-web';
+import BSON from 'bson';
 
 import './EditProduct.css';
 import Input from '../../components/Input/Input';
 import Button from '../../components/Button/Button';
+
 
 class ProductEditPage extends Component {
   state = {
@@ -14,31 +16,37 @@ class ProductEditPage extends Component {
     description: ''
   };
 
-  componentDidMount() {
+  async componentDidMount() {
     // Will be "edit" or "add"
     if (this.props.match.params.mode === 'edit') {
-      axios
-        .get('http://localhost:3100/products/' + this.props.match.params.id)
+      const app = new Realm.App({ id: "myshop-guauv" });
+      const mongodb = app.currentUser.mongoClient('mongodb-atlas');
+      mongodb
+        .db('myFirstDatabase')
+        .collection('products')
+        .find({_id: new BSON.ObjectId(this.props.match.params.id)})
         .then(productResponse => {
-          const product = productResponse.data;
+          const product = productResponse[0];
+          product._id = product._id.toString();
+          product.price = product.price.toString();
           this.setState({
             isLoading: false,
             title: product.name,
-            price: product.price.toString(),
+            price: product.price,
             imageUrl: product.image,
             description: product.description
           });
         })
         .catch(err => {
           this.setState({ isLoading: false });
-          console.log(err);
+          this.props.onError('Loading product failed. Please try again later');
         });
     } else {
       this.setState({ isLoading: false });
     }
   }
 
-  editProductHandler = event => {
+  editProductHandler = async(event) => {
     event.preventDefault();
     if (
       this.state.title.trim() === '' ||
@@ -51,21 +59,28 @@ class ProductEditPage extends Component {
     this.setState({ isLoading: true });
     const productData = {
       name: this.state.title,
-      price: parseFloat(this.state.price),
+      price: BSON.Decimal128.fromString(this.state.price.toString()),
       image: this.state.imageUrl,
       description: this.state.description
     };
+    
     let request;
+    const app = new Realm.App({ id: "myshop-guauv" });
+    const mongodb = app.currentUser.mongoClient('mongodb-atlas');
     if (this.props.match.params.mode === 'edit') {
-      request = axios.patch(
-        'http://localhost:3100/products/' + this.props.match.params.id,
-        productData
-      );
+      request = mongodb
+        .db('myFirstDatabase')
+        .collection('products')
+        .updateOne({_id: new BSON.ObjectID(this.props.match.params.id) }, productData);
     } else {
-      request = axios.post('http://localhost:3100/products', productData);
+      request = mongodb
+        .db('myFirstDatabase')
+        .collection('products')
+        .insertOne(productData);
     }
     request
       .then(result => {
+        console.log(result);
         this.setState({ isLoading: false });
         this.props.history.replace('/products');
       })
