@@ -33,35 +33,33 @@ class App extends Component {
     if (authData.email.trim() === '' || authData.password.trim() === '') {
       return;
     }
+    let user;
     if (this.state.authMode === 'login') {
       const credentials = Realm.Credentials.emailPassword(authData.email, authData.password);
       console.log(credentials)
       try {
         // Authenticate the user
-        const user = await this.client.logIn(credentials)
-
+        user = await this.client.logIn(credentials);
         // `App.currentUser` updates to match the logged in user
         if (user.id === this.client.currentUser.id) {
-          await user.callFunction('Greet', ["Kate"])
+          //await user.callFunction('Greet', ["Kate"])
           const token = user
           console.log(token);
           this.setState({ isAuth: true });
-          //return user
-        } else {
-          console.log(request.id, '!=', this.client.currentUser.id)
-          console.error("Failed to login. Incorrect credentials provided.");
-          this.setState({ isAuth: false })
         }
       } catch (err) {
         console.error("Failed to login user", err);
-        console.log(err);
         this.setState({ isAuth: false });
+        this.errorHandler(
+          'Failed to login user. Incorrect username or password provided.'
+        );
       }
     } else {
       try {
-        const request = await this.client.emailPasswordAuth.registerUser(authData.email, authData.password)
+        user = await this.client.emailPasswordAuth.registerUser(authData.email, authData.password)
       } catch (err) {
         console.error("Failed to register user", err);
+        this.errorHandler("Failed to register user.")
       }
     }
   };
